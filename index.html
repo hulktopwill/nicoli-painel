@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atendimento Nicoli</title>
+<style>
+:root{--bg:#f6f4f1;--card:#fff;--tx:#1f1d1a;--mut:#6b665f;--ac:#b0546b;--ok:#2e7d5b;--warn:#b26a00;--bd:#e7e2dc}
+@media (prefers-color-scheme:dark){:root{--bg:#161514;--card:#201f1d;--tx:#f1eee9;--mut:#a39d94;--ac:#e08aa0;--ok:#6fcf9f;--warn:#f0b35a;--bd:#33302c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px}h1{font-size:20px;margin:4px 0}h2{font-size:15px;margin:22px 0 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--mut);font-size:13px}.tabs{display:flex;gap:6px;margin:12px 0}.tabs button{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:6px 12px;border-radius:99px;cursor:pointer}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.k{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px}.k b{display:block;font-size:24px}.k span{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden;font-size:13px}
+td,th{padding:7px 9px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--bd)}
+.responder{background:color-mix(in srgb,var(--ok) 20%,transparent)}.passar_nicoli{background:color-mix(in srgb,var(--warn) 25%,transparent)}.erro{background:#c0392b33}
+.bars div{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px}.bars i{height:10px;background:var(--ac);border-radius:4px;display:block}
+.alert{background:color-mix(in srgb,var(--warn) 20%,var(--card));border:1px solid var(--warn);padding:10px;border-radius:10px;margin:10px 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.two{grid-template-columns:1fr}}
+.wrap{overflow-x:auto}
+</style></head><body><div id="login" style="max-width:360px;margin:15vh auto;padding:16px;text-align:center"><h1>Painel Nicoli</h1><p class="sub">Digite a senha</p><input id="pw" type="password" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:16px"><button id="ent" style="margin-top:10px;width:100%;padding:10px;border:0;border-radius:8px;background:var(--ac);color:#fff;font-size:16px">Entrar</button><p class="sub" id="lerr"></p></div><main id="app" style="display:none">
+<h1>Atendimento automático — Nicoli Kollet</h1><div class="sub" id="upd">carregando…</div>
+<div class="grid" id="saude" style="margin-top:10px"></div><div id="alertas"></div>
+<div class="tabs"><button data-p="hoje" class="on">Hoje</button><button data-p="semana">7 dias</button><button data-p="mes">30 dias</button></div>
+<div class="grid" id="kpis"></div>
+<div class="two"><div><h2>Por serviço</h2><div class="bars" id="serv"></div></div><div><h2>Por cidade</h2><div class="bars" id="cid"></div></div></div>
+<h2>Leads por anúncio</h2><div class="bars" id="anun"></div>
+<h2>Gasto com IA</h2><div class="bars" id="gasto"></div>
+<h2>Últimas decisões</h2><div class="wrap"><table id="ult"></table></div>
+<h2>Rechamadas combinadas</h2><div class="wrap"><table id="rech"></table></div>
+</main><script>
+let M=null,P='hoje';
+const fmtT=s=>s==null?'—':(s<90?s+' s':Math.round(s/60)+' min');
+function bars(el,obj){const e=Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]);const mx=Math.max(1,...e.map(x=>x[1]));
+ document.getElementById(el).innerHTML=e.length?e.map(([k,v])=>`<div><span style="width:150px">${k}</span><i style="width:${v/mx*60}%"></i>${v}</div>`).join(''):'<div class="sub">sem dados</div>'}
+function draw(){if(!M)return;const r=M[P];const S=M.saude||{};const st=(n,o,d)=>`<div class="k"><b style="color:${o?'var(--ok)':'#d9534f'}">${o?'● online':'● parado'}</b><span>${n}${d?' — '+d:''}</span></div>`;document.getElementById('saude').innerHTML=st('Atendente',S.atendente&&S.atendente.ok,S.atendente&&S.atendente.desde?'último ciclo '+S.atendente.desde:'')+st('Ponte WhatsApp',S.ponte&&S.ponte.ok,S.ponte?S.ponte.estado+(S.ponte.desde?' · '+S.ponte.desde:''):'')+st('Transcrição de áudio',S.transcricao&&S.transcricao.ok,S.transcricao&&S.transcricao.ultima_atividade?'última atividade '+S.transcricao.ultima_atividade:'')+`<div class="k"><b>${S.horario_comercial?'Atendendo':'Fora do horário'}</b><span>horário comercial</span></div>`;
+ document.getElementById('upd').textContent='Atualizado '+M.atualizado+(M.pausado?' — PAUSADO (PAUSAR.txt)':'');
+ const k=[['Conversas',r.conversas],['Leads novos',r.leads_novos],['Clientes',r.clientes],['Respostas do robô',r.respostas],['Passadas à Nicoli',r.passagens_nicoli],['Mensagens enviadas',r.mensagens_enviadas],['1ª resposta (média)',fmtT(r.tempo_medio_1a_resposta_seg)],['Gasto IA',`US$ ${r.custo_usd.toFixed(2)}`],['Custo por conversa',r.custo_por_conversa_usd==null?'—':`US$ ${r.custo_por_conversa_usd.toFixed(3)}`],['Erros',r.erros]];
+ document.getElementById('kpis').innerHTML=k.map(([a,b])=>`<div class="k"><b>${b}</b><span>${a}</span></div>`).join('');
+ bars('serv',r.por_servico);bars('cid',r.por_cidade);bars('anun',r.por_anuncio);
+ const lim=M.limite_mensal_usd,gm=M.mes.custo_usd;document.getElementById('gasto').innerHTML=`<div><span style="width:150px">Mês (de US$ ${lim})</span><i style="width:${Math.min(100,gm/lim*100)*0.6}%"></i>US$ ${gm.toFixed(2)}</div>`;
+ let al=[];if(M.pausado)al.push('Atendente pausado.');if(gm>lim*0.8)al.push('Gasto do mês passou de 80% do limite.');if(r.erros)al.push(r.erros+' erro(s) no período — ver registro/atendente.log.');
+ document.getElementById('alertas').innerHTML=al.map(a=>`<div class="alert">${a}</div>`).join('');
+ document.getElementById('ult').innerHTML='<tr><th>Quando</th><th>Contato</th><th>Ação</th><th>Serviço</th><th>Etapa</th><th>Motivo</th></tr>'+(M.ultimas_decisoes||[]).map(d=>`<tr><td>${d.data.slice(8,10)}/${d.data.slice(5,7)} ${d.hora}</td><td>${d.contato}</td><td><span class="pill ${d.acao}">${d.acao}</span></td><td>${d.servico||''}</td><td>${d.etapa||''}</td><td>${d.motivo||''}</td></tr>`).join('');
+ document.getElementById('rech').innerHTML='<tr><th>Data</th><th>Contato</th><th>Motivo</th></tr>'+(M.rechamadas_proximas||[]).map(d=>`<tr><td>${d.data}</td><td>${d.contato}</td><td>${d.motivo||''}</td></tr>`).join('');}
+let PW=null;
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decifra(d,pw){const enc=new TextEncoder();const k0=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);
+ const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:b64(d.salt),iterations:d.iter,hash:'SHA-256'},k0,512));
+ const hk=async raw=>crypto.subtle.importKey('raw',raw,{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ const kE=await hk(bits.slice(0,32)),kM=await hk(bits.slice(32));const iv=b64(d.iv),ct=b64(d.ct);
+ const mm=new Uint8Array(iv.length+ct.length);mm.set(iv);mm.set(ct,iv.length);
+ const tag=new Uint8Array(await crypto.subtle.sign('HMAC',kM,mm)),t2=b64(d.tag);if(tag.length!==t2.length||tag.some((x,i)=>x!==t2[i]))throw new Error('senha');
+ const out=new Uint8Array(ct.length);for(let i=0;i*32<ct.length;i++){const blk=new Uint8Array(iv.length+4);blk.set(iv);new DataView(blk.buffer).setUint32(iv.length,i);
+  const ks=new Uint8Array(await crypto.subtle.sign('HMAC',kE,blk));for(let j=0;j<32&&i*32+j<ct.length;j++)out[i*32+j]=ct[i*32+j]^ks[j]}
+ return JSON.parse(new TextDecoder().decode(out))}
+async function load(){try{const d=await (await fetch('dados.json?'+Date.now(),{cache:'no-store'})).json();M=await decifra(d,PW);
+ if(!M.ultimas_decisoes&&M.ultimas)M.ultimas_decisoes=M.ultimas.map(x=>({...x,contato:'',motivo:''}));draw();return true}catch(e){return false}}
+async function entrar(){PW=document.getElementById('pw').value;if(await load()){try{sessionStorage.setItem('pw',PW)}catch(e){}
+ document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';setInterval(load,60000)}else document.getElementById('lerr').textContent='Senha incorreta (ou dados ainda não publicados).'}
+document.getElementById('ent').onclick=entrar;document.getElementById('pw').onkeydown=e=>{if(e.key==='Enter')entrar()};
+try{const s=sessionStorage.getItem('pw');if(s){document.getElementById('pw').value=s;entrar()}}catch(e){}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');P=b.dataset.p;draw()});
+
+</script></body></html>
